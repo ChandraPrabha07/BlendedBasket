@@ -274,6 +274,11 @@ app.put('/api/orders/:id/status', authenticateToken, isAdmin, async (req, res) =
     }
 });
 
+// Root Route to verify API is running
+app.get('/', (req, res) => {
+    res.json({ message: 'BlendedBasket API is running successfully!' });
+});
+
 // Start the server (Only if not running in a serverless environment like Vercel)
 if (!process.env.VERCEL) {
     const port = process.env.PORT || PORT;

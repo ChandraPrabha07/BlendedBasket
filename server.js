@@ -23,14 +23,17 @@ app.use((req, res, next) => {
 app.use(express.static(path.join(__dirname)));
 
 // --- MongoDB Connection Setup ---
-mongoose.connect('mongodb://127.0.0.1:27017/bbdata')
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/bbdata';
+
+mongoose.connect(MONGODB_URI)
     .then(() => {
-        console.log('Successfully connected to MongoDB (bbdata).');
+        console.log('Successfully connected to MongoDB.');
         seedDatabase(); 
     })
     .catch((err) => {
         console.error('Error connecting to MongoDB:', err.message);
-        process.exit(1); 
+        // Do not crash the serverless function, just log it.
+        // process.exit(1); 
     });
 
 // --- Mongoose Schemas & Models ---
@@ -271,7 +274,13 @@ app.put('/api/orders/:id/status', authenticateToken, isAdmin, async (req, res) =
     }
 });
 
-// Start the server
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Start the server (Only if not running in a serverless environment like Vercel)
+if (!process.env.VERCEL) {
+    const port = process.env.PORT || PORT;
+    app.listen(port, () => {
+        console.log(`Server is running on port ${port}`);
+    });
+}
+
+// Export for Vercel Serverless Functions
+module.exports = app;

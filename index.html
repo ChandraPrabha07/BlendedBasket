@@ -26,7 +26,7 @@
             <a href="#" class="icon-link" aria-label="Cart">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="21" r="1"></circle><circle cx="20" cy="21" r="1"></circle><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path></svg>
             </a>
-            <a href="#" class="btn-primary">Sign In</a>
+            <a href="#" class="btn-primary" id="openAuthModal">Sign In</a>
         </div>
     </nav>
 
@@ -80,6 +80,28 @@
                     <p>Fresh out of the oven. Discover our selection of artisan breads, rustic pastries, and sweet comforts.</p>
                 </div>
             </div>
+        </div>
+    </section>
+
+    <section class="products-section" id="clothing-products">
+        <div class="section-header">
+            <h2>Handcrafted Clothing</h2>
+            <p>Our curated selection of authentic Indian apparel.</p>
+        </div>
+        <div class="products-grid" id="clothing-grid">
+            <!-- Populated via JS -->
+            <p style="text-align: center; grid-column: 1 / -1;">Loading clothing...</p>
+        </div>
+    </section>
+
+    <section class="products-section" id="bakery-products">
+        <div class="section-header">
+            <h2>Artisan Bakery</h2>
+            <p>Freshly baked Indian sweets and treats.</p>
+        </div>
+        <div class="products-grid" id="bakery-grid">
+            <!-- Populated via JS -->
+            <p style="text-align: center; grid-column: 1 / -1;">Loading bakery items...</p>
         </div>
     </section>
 
@@ -263,6 +285,177 @@
             const root = ReactDOM.createRoot(taskRootNode);
             root.render(<TaskManager />);
         }
+    </script>
+    <!-- Auth Modal -->
+    <div class="modal-overlay" id="authModal">
+        <div class="modal">
+            <span class="modal-close" id="closeAuthModal">&times;</span>
+            <h2 id="modalTitle">Sign In</h2>
+            <form id="authForm" class="task-form" style="margin-bottom: 0; padding: 0; border: none; background: transparent;">
+                <div class="form-group" id="nameGroup" style="display: none;">
+                    <label>Full Name</label>
+                    <input type="text" id="authName" placeholder="Enter your name">
+                </div>
+                <div class="form-group">
+                    <label>Email Address</label>
+                    <input type="email" id="authEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label>Password</label>
+                    <input type="password" id="authPassword" placeholder="Enter your password" required>
+                </div>
+                <div id="authError" class="error-text" style="display: none;"></div>
+                <button type="submit" class="btn-primary" id="authSubmit">Sign In</button>
+            </form>
+            <p id="authToggleText">Don't have an account? <a id="toggleAuthMode">Sign Up</a></p>
+        </div>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Modal Logic
+        const authModal = document.getElementById('authModal');
+        const openAuthModalBtn = document.getElementById('openAuthModal');
+        const closeAuthModalBtn = document.getElementById('closeAuthModal');
+        const authForm = document.getElementById('authForm');
+        const modalTitle = document.getElementById('modalTitle');
+        const nameGroup = document.getElementById('nameGroup');
+        const authSubmitBtn = document.getElementById('authSubmit');
+        const authToggleText = document.getElementById('authToggleText');
+        const authError = document.getElementById('authError');
+        
+        let isSignUpMode = false;
+
+        openAuthModalBtn.addEventListener('click', (e) => {
+            if (openAuthModalBtn.textContent === 'Sign Out') return;
+            e.preventDefault();
+            authModal.classList.add('active');
+        });
+
+        closeAuthModalBtn.addEventListener('click', () => {
+            authModal.classList.remove('active');
+            authError.style.display = 'none';
+        });
+
+        function setupToggle() {
+            const btn = document.getElementById('toggleAuthMode');
+            if (btn) {
+                btn.addEventListener('click', () => {
+                    isSignUpMode = !isSignUpMode;
+                    if (isSignUpMode) {
+                        modalTitle.textContent = 'Sign Up';
+                        nameGroup.style.display = 'flex';
+                        document.getElementById('authName').required = true;
+                        authSubmitBtn.textContent = 'Sign Up';
+                        authToggleText.innerHTML = 'Already have an account? <a id="toggleAuthMode">Sign In</a>';
+                    } else {
+                        modalTitle.textContent = 'Sign In';
+                        nameGroup.style.display = 'none';
+                        document.getElementById('authName').required = false;
+                        authSubmitBtn.textContent = 'Sign In';
+                        authToggleText.innerHTML = 'Don\\'t have an account? <a id="toggleAuthMode">Sign Up</a>';
+                    }
+                    setupToggle();
+                });
+            }
+        }
+        setupToggle();
+
+        authForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            authError.style.display = 'none';
+            authSubmitBtn.disabled = true;
+            
+            const email = document.getElementById('authEmail').value;
+            const password = document.getElementById('authPassword').value;
+            const name = document.getElementById('authName').value;
+            
+            const endpoint = isSignUpMode ? '/api/signup' : '/api/signin';
+            const payload = isSignUpMode ? { name, email, password } : { email, password };
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    localStorage.setItem('token', data.token);
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    authModal.classList.remove('active');
+                    openAuthModalBtn.textContent = 'Sign Out';
+                    openAuthModalBtn.onclick = (ev) => {
+                        ev.preventDefault();
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        window.location.reload();
+                    };
+                    alert(data.message);
+                    authForm.reset();
+                } else {
+                    authError.textContent = data.error || 'Authentication failed';
+                    authError.style.display = 'block';
+                }
+            } catch (error) {
+                authError.textContent = 'Network error. Please try again.';
+                authError.style.display = 'block';
+            } finally {
+                authSubmitBtn.disabled = false;
+            }
+        });
+
+        // Fetch and Render Products
+        async function loadProducts() {
+            try {
+                const response = await fetch('/api/products');
+                if (!response.ok) throw new Error('Failed to fetch');
+                const products = await response.json();
+                
+                const clothingGrid = document.getElementById('clothing-grid');
+                const bakeryGrid = document.getElementById('bakery-grid');
+                
+                let clothingHTML = '';
+                let bakeryHTML = '';
+                
+                products.forEach(p => {
+                    const card = \`
+                        <div class="product-card">
+                            <h4>\${p.name}</h4>
+                            <div class="price">₹\${p.price}</div>
+                            <p>\${p.description || ''}</p>
+                            <button class="btn-secondary" onclick="alert('Added \${p.name} to cart!')">Add to Cart</button>
+                        </div>
+                    \`;
+                    if (p.category === 'Clothing') clothingHTML += card;
+                    else if (p.category === 'Bakery') bakeryHTML += card;
+                });
+                
+                if (clothingGrid) clothingGrid.innerHTML = clothingHTML || '<p>No clothing items found.</p>';
+                if (bakeryGrid) bakeryGrid.innerHTML = bakeryHTML || '<p>No bakery items found.</p>';
+            } catch (error) {
+                console.error('Error fetching products:', error);
+                document.getElementById('clothing-grid').innerHTML = '<p>Error loading products.</p>';
+                document.getElementById('bakery-grid').innerHTML = '<p>Error loading products.</p>';
+            }
+        }
+        
+        // Initial load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadProducts();
+            
+            const token = localStorage.getItem('token');
+            if (token) {
+                openAuthModalBtn.textContent = 'Sign Out';
+                openAuthModalBtn.onclick = (ev) => {
+                    ev.preventDefault();
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.reload();
+                };
+            }
+        });
     </script>
 </body>
 </html>

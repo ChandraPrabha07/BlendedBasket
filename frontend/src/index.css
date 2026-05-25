@@ -1,0 +1,63 @@
+:root {
+    --bg-color: #fcfbf9;
+    --text-primary: #2d2b2a;
+    --text-secondary: #5e5b5a;
+    --accent-color: #c48b71;
+    --accent-hover: #a87259;
+    --card-bg: #ffffff;
+    --border-color: #eae6e0;
+    --font-sans: 'Outfit', sans-serif;
+    --font-serif: 'Playfair Display', serif;
+    --transition-smooth: all 0.3s ease;
+    --shadow-sm: 0 4px 12px rgba(45, 43, 42, 0.05);
+    --shadow-md: 0 10px 30px rgba(45, 43, 42, 0.08);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: var(--font-sans); background-color: var(--bg-color); color: var(--text-primary); line-height: 1.6; }
+a { text-decoration: none; color: inherit; }
+.btn-primary, .btn-secondary, .btn-danger {
+    display: inline-flex; align-items: center; justify-content: center;
+    padding: 10px 24px; border-radius: 30px; font-weight: 500; cursor: pointer; transition: var(--transition-smooth); border: 1px solid;
+}
+.btn-primary { background-color: var(--text-primary); color: var(--bg-color); border-color: var(--text-primary); }
+.btn-primary:hover { background-color: transparent; color: var(--text-primary); }
+.btn-secondary { background-color: transparent; color: var(--text-primary); border-color: var(--border-color); }
+.btn-secondary:hover { border-color: var(--text-primary); background-color: var(--text-primary); color: var(--bg-color); }
+.btn-danger { background-color: transparent; color: #e74c3c; border-color: #e74c3c; }
+.btn-danger:hover { background-color: #e74c3c; color: #fff; }
+
+.navbar { display: flex; justify-content: space-between; align-items: center; padding: 1.5rem 5%; background: rgba(252, 251, 249, 0.9); position: sticky; top: 0; z-index: 100; border-bottom: 1px solid var(--border-color); }
+.logo { font-size: 1.5rem; font-weight: 700; }
+.logo-highlight { color: var(--accent-color); font-family: var(--font-serif); font-style: italic; }
+.nav-links { display: flex; gap: 2rem; list-style: none; }
+.nav-links a.active { color: var(--accent-color); font-weight: 600; }
+.nav-actions { display: flex; gap: 1.5rem; align-items: center; }
+
+.container { padding: 4rem 5%; min-height: 80vh; }
+.hero { text-align: center; padding: 6rem 5%; }
+.hero h1 { font-size: 3.5rem; margin-bottom: 1rem; }
+.hero p { font-size: 1.2rem; color: var(--text-secondary); margin-bottom: 2rem; }
+
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 2rem; }
+.card { background: var(--card-bg); border-radius: 12px; padding: 1.5rem; border: 1px solid var(--border-color); display: flex; flex-direction: column; transition: var(--transition-smooth); }
+.card:hover { box-shadow: var(--shadow-sm); transform: translateY(-3px); }
+.card h3 { font-size: 1.2rem; margin-bottom: 0.5rem; }
+.card .price { font-weight: 700; color: var(--accent-color); font-size: 1.2rem; margin-bottom: 0.5rem; }
+.card p { color: var(--text-secondary); flex-grow: 1; margin-bottom: 1rem; }
+.card button { width: 100%; }
+
+.form-container { max-width: 400px; margin: 2rem auto; padding: 2rem; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color); }
+.form-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: 0.5rem; }
+.form-group input, .form-group select { padding: 10px; border: 1px solid var(--border-color); border-radius: 8px; font-family: inherit; }
+.error { color: #e74c3c; font-size: 0.9rem; margin-bottom: 1rem; }
+
+.cart-item { display: flex; justify-content: space-between; align-items: center; padding: 1rem; border-bottom: 1px solid var(--border-color); }
+.cart-total { font-size: 1.5rem; font-weight: 700; text-align: right; margin: 2rem 0; }
+
+.table { width: 100%; border-collapse: collapse; margin-top: 1rem; }
+.table th, .table td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border-color); }
+.status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; }
+.status-Pending { background: #fef3c7; color: #92400e; }
+.status-Processing { background: #dbeafe; color: #1e40af; }
+.status-Shipped { background: #f3e8ff; color: #6b21a8; }
+.status-Delivered { background: #dcfce3; color: #166534; }

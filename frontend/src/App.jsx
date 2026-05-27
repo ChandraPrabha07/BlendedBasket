@@ -1,20 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import axios from 'axios';
-import { ShoppingCart, User as UserIcon, LogOut, Package, ShieldCheck, CreditCard, MapPin, CheckCircle } from 'lucide-react';
+import { ShoppingCart, User as UserIcon, LogOut, Package, ShieldCheck, CreditCard, MapPin, CheckCircle, Edit, Trash2, Plus } from 'lucide-react';
 import { productsData } from './data/products';
 
 axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
+// Helper to get/set local storage products seamlessly
+const getLocalProducts = () => {
+  const local = localStorage.getItem('blendedProducts');
+  return local ? JSON.parse(local) : productsData;
+};
+const setLocalProducts = (data) => localStorage.setItem('blendedProducts', JSON.stringify(data));
+
+// Helper for orders
+const getLocalOrders = () => {
+  const local = localStorage.getItem('blendedOrders');
+  return local ? JSON.parse(local) : [];
+};
+const setLocalOrders = (data) => localStorage.setItem('blendedOrders', JSON.stringify(data));
+
 const Home = ({ addToCart }) => {
-  const [products, setProducts] = useState(productsData);
+  const [products, setProducts] = useState(getLocalProducts());
   const [category, setCategory] = useState('');
   
   useEffect(() => {
+    const allProducts = getLocalProducts();
     if (category) {
-      setProducts(productsData.filter(p => p.category === category));
+      setProducts(allProducts.filter(p => p.category === category));
     } else {
-      setProducts(productsData);
+      setProducts(allProducts);
     }
   }, [category]);
 
@@ -33,7 +48,7 @@ const Home = ({ addToCart }) => {
         {products.map((p, index) => (
           <div key={p._id} className="card fade-in" style={{ animationDelay: `${index * 0.05}s` }}>
             <div className="card-img-wrapper">
-              <img src={p.image} alt={p.name} className="card-img" />
+              <img src={p.image || '/images/placeholder.jpg'} alt={p.name} className="card-img" />
             </div>
             <h3>{p.name}</h3>
             <div className="price">₹{p.price}</div>
@@ -46,7 +61,7 @@ const Home = ({ addToCart }) => {
   );
 };
 
-const Cart = ({ cart, setCart, user }) => {
+const Cart = ({ cart, setCart }) => {
   const navigate = useNavigate();
   const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
 
@@ -75,7 +90,7 @@ const Cart = ({ cart, setCart, user }) => {
         {cart.map(item => (
           <div key={item._id} className="cart-item slide-up">
             <div className="cart-item-info">
-              <img src={item.image} alt={item.name} className="cart-item-img" />
+              <img src={item.image || '/images/placeholder.jpg'} alt={item.name} className="cart-item-img" />
               <div>
                 <h4>{item.name}</h4>
                 <div style={{color: 'var(--text-secondary)'}}>₹{item.price} each</div>
@@ -118,18 +133,20 @@ const Checkout = ({ cart, setCart, user }) => {
 
   const handlePayment = async () => {
     setLoading(true);
-    // Simulate payment gateway delay
     await new Promise(r => setTimeout(r, 2000));
     
-    // Attempt to save to database if logged in, but don't block success if DB fails
-    if (user) {
-      try {
-        const items = cart.map(i => ({ productId: i._id, name: i.name, quantity: i.quantity, price: i.price }));
-        await axios.post('/orders', { items, totalAmount: total });
-      } catch (err) {
-        console.error("Order save failed, likely due to DB connection. Mocking success.");
-      }
-    }
+    // Save to localStorage for seamless Orders display
+    const newOrder = {
+      _id: 'ord_' + Math.random().toString(36).substr(2, 9),
+      createdAt: new Date().toISOString(),
+      items: cart,
+      totalAmount: total,
+      status: 'Pending',
+      address
+    };
+    
+    const existingOrders = getLocalOrders();
+    setLocalOrders([newOrder, ...existingOrders]);
     
     setLoading(false);
     setCart([]);
@@ -221,40 +238,144 @@ const Checkout = ({ cart, setCart, user }) => {
           <p style={{color: 'var(--text-secondary)', marginBottom: '2rem'}}>
             Thank you, {address.name}! Your beautifully crafted items will be delivered to {address.city} soon.
           </p>
-          <Link to="/" className="btn-primary">Continue Shopping</Link>
+          <Link to="/orders" className="btn-primary">View My Orders</Link>
         </div>
       )}
     </div>
   );
 };
 
-const Orders = ({ user }) => {
+const Orders = () => {
   const [orders, setOrders] = useState([]);
 
   useEffect(() => {
-    const fetchOrders = () => {
-      axios.get('/orders').then(res => setOrders(res.data)).catch(console.error);
-    };
-    fetchOrders();
+    // Seamlessly fetch from localStorage
+    setOrders(getLocalOrders());
   }, []);
 
   return (
     <div className="container">
       <h2>My Orders</h2>
-      <div className="table-container">
+      <div className="table-container slide-up">
         <table className="table">
           <thead><tr><th>Order ID</th><th>Date</th><th>Items</th><th>Total</th><th>Status</th></tr></thead>
           <tbody>
             {orders.map(o => (
               <tr key={o._id}>
-                <td>{o._id.substring(o._id.length - 6)}</td>
+                <td style={{fontWeight: 'bold'}}>#{o._id.substring(4, 10).toUpperCase()}</td>
                 <td>{new Date(o.createdAt).toLocaleDateString()}</td>
                 <td>{o.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}</td>
                 <td>₹{o.totalAmount}</td>
                 <td><span className={`status-badge status-${o.status}`}>{o.status}</span></td>
               </tr>
             ))}
-            {orders.length === 0 && <tr><td colSpan="5" style={{textAlign:'center', padding: '2rem'}}>No past orders found or database is unreachable.</td></tr>}
+            {orders.length === 0 && <tr><td colSpan="5" style={{textAlign:'center', padding: '3rem', color: 'var(--text-secondary)'}}>You haven't placed any orders yet.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+};
+
+const Admin = () => {
+  const [products, setProducts] = useState(getLocalProducts());
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentProduct, setCurrentProduct] = useState({ name: '', price: '', category: 'Clothing', description: '', image: '' });
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    let updatedProducts;
+    if (currentProduct._id) {
+      updatedProducts = products.map(p => p._id === currentProduct._id ? currentProduct : p);
+    } else {
+      updatedProducts = [{...currentProduct, _id: 'p' + Date.now()}, ...products];
+    }
+    setProducts(updatedProducts);
+    setLocalProducts(updatedProducts);
+    setIsEditing(false);
+    setCurrentProduct({ name: '', price: '', category: 'Clothing', description: '', image: '' });
+  };
+
+  const handleDelete = (id) => {
+    if(window.confirm('Are you sure you want to delete this product?')) {
+      const updated = products.filter(p => p._id !== id);
+      setProducts(updated);
+      setLocalProducts(updated);
+    }
+  };
+
+  return (
+    <div className="container">
+      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
+        <h2>Admin Dashboard</h2>
+        {!isEditing && (
+          <button className="btn-primary" onClick={() => { setIsEditing(true); setCurrentProduct({ name: '', price: '', category: 'Clothing', description: '', image: '' }); }}>
+            <Plus size={18} style={{marginRight: '8px'}}/> Add New Product
+          </button>
+        )}
+      </div>
+
+      {isEditing && (
+        <div className="checkout-card slide-up" style={{marginBottom: '3rem'}}>
+          <h3>{currentProduct._id ? 'Edit Product' : 'Add New Product'}</h3>
+          <form onSubmit={handleSave}>
+            <div className="form-row">
+              <div className="form-group" style={{flex: 2}}>
+                <label>Product Name</label>
+                <input type="text" required value={currentProduct.name} onChange={e => setCurrentProduct({...currentProduct, name: e.target.value})} />
+              </div>
+              <div className="form-group" style={{flex: 1}}>
+                <label>Price (₹)</label>
+                <input type="number" required value={currentProduct.price} onChange={e => setCurrentProduct({...currentProduct, price: parseInt(e.target.value)})} />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group" style={{flex: 1}}>
+                <label>Category</label>
+                <select value={currentProduct.category} onChange={e => setCurrentProduct({...currentProduct, category: e.target.value})}>
+                  <option value="Clothing">Clothing</option>
+                  <option value="Bakery">Bakery</option>
+                </select>
+              </div>
+              <div className="form-group" style={{flex: 2}}>
+                <label>Image URL / Path</label>
+                <input type="text" placeholder="/images/filename.jpg" value={currentProduct.image} onChange={e => setCurrentProduct({...currentProduct, image: e.target.value})} />
+              </div>
+            </div>
+            <div className="form-group">
+              <label>Description</label>
+              <input type="text" required value={currentProduct.description} onChange={e => setCurrentProduct({...currentProduct, description: e.target.value})} />
+            </div>
+            <div style={{display: 'flex', gap: '1rem', marginTop: '1rem'}}>
+              <button type="submit" className="btn-primary">Save Product</button>
+              <button type="button" className="btn-secondary" onClick={() => setIsEditing(false)}>Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
+
+      <div className="table-container slide-up">
+        <table className="table">
+          <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead>
+          <tbody>
+            {products.map(p => (
+              <tr key={p._id}>
+                <td>
+                  <img src={p.image || '/images/placeholder.jpg'} alt={p.name} style={{width: '50px', height: '50px', objectFit: 'cover', borderRadius: '8px'}} />
+                </td>
+                <td style={{fontWeight: '500'}}>{p.name}</td>
+                <td>{p.category}</td>
+                <td>₹{p.price}</td>
+                <td>
+                  <button className="nav-icon" style={{display: 'inline-block', marginRight: '10px'}} onClick={() => { setCurrentProduct(p); setIsEditing(true); }}>
+                    <Edit size={18} color="var(--accent-color)" />
+                  </button>
+                  <button className="nav-icon" style={{display: 'inline-block'}} onClick={() => handleDelete(p._id)}>
+                    <Trash2 size={18} color="#ef4444" />
+                  </button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -263,37 +384,23 @@ const Orders = ({ user }) => {
 };
 
 const Auth = ({ setUser, isLogin }) => {
-  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
-  const [error, setError] = useState('');
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const navigate = useNavigate();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    try {
-      const endpoint = isLogin ? '/signin' : '/signup';
-      const res = await axios.post(endpoint, formData);
-      localStorage.setItem('token', res.data.token);
-      localStorage.setItem('user', JSON.stringify(res.data.user));
-      axios.defaults.headers.common['Authorization'] = `Bearer ${res.data.token}`;
-      setUser(res.data.user);
-      navigate('/');
-    } catch (err) {
-      setError(err.response?.data?.error || 'Authentication failed. Please check your database connection.');
-    }
+    // Seamless Mock Login
+    const mockUser = { name: formData.email.split('@')[0], email: formData.email, role: formData.email === 'admin@blendedbasket.com' ? 'admin' : 'user' };
+    localStorage.setItem('user', JSON.stringify(mockUser));
+    setUser(mockUser);
+    navigate('/');
   };
 
   return (
     <div className="container">
       <div className="form-container slide-up">
-        <h2 style={{textAlign:'center', marginBottom:'1.5rem', fontSize: '2rem'}}>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-        {error && <div className="error">{error}</div>}
+        <h2 style={{textAlign:'center', marginBottom:'1.5rem', fontSize: '2rem'}}>{isLogin ? 'Sign In' : 'Create Account'}</h2>
         <form onSubmit={handleSubmit}>
-          {!isLogin && (
-            <div className="form-group">
-              <label>Name</label>
-              <input type="text" required onChange={e => setFormData({...formData, name: e.target.value})} />
-            </div>
-          )}
           <div className="form-group">
             <label>Email</label>
             <input type="email" required onChange={e => setFormData({...formData, email: e.target.value})} />
@@ -307,10 +414,7 @@ const Auth = ({ setUser, isLogin }) => {
           </button>
         </form>
         <p style={{textAlign:'center', marginTop:'1.5rem', color: 'var(--text-secondary)'}}>
-          {isLogin ? "Don't have an account? " : "Already have an account? "}
-          <Link to={isLogin ? "/register" : "/login"} style={{color: 'var(--accent-color)', fontWeight:'600'}}>
-            {isLogin ? 'Sign Up' : 'Sign In'}
-          </Link>
+          <small>Note: Use <b>admin@blendedbasket.com</b> to login as Admin.</small>
         </p>
       </div>
     </div>
@@ -322,18 +426,14 @@ export default function App() {
   const [cart, setCart] = useState([]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    if (token && storedUser) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    if (storedUser) {
       setUser(JSON.parse(storedUser));
     }
   }, []);
 
   const logout = () => {
-    localStorage.removeItem('token');
     localStorage.removeItem('user');
-    delete axios.defaults.headers.common['Authorization'];
     setUser(null);
   };
 
@@ -348,7 +448,7 @@ export default function App() {
         
         <div className="nav-actions">
           {user?.role === 'admin' && (
-            <Link to="/admin" className="nav-icon"><ShieldCheck size={22}/></Link>
+            <Link to="/admin" className="nav-icon" title="Admin Dashboard"><ShieldCheck size={22}/></Link>
           )}
           
           <Link to="/cart" className="nav-cart">
@@ -358,8 +458,8 @@ export default function App() {
           
           {user ? (
             <div className="user-menu">
-              <Link to="/orders" className="nav-icon"><Package size={22} /></Link>
-              <button onClick={logout} className="nav-icon"><LogOut size={22}/></button>
+              <Link to="/orders" className="nav-icon" title="My Orders"><Package size={22} /></Link>
+              <button onClick={logout} className="nav-icon" title="Logout"><LogOut size={22}/></button>
             </div>
           ) : (
             <Link to="/login" className="btn-secondary" style={{padding: '8px 20px'}}>Sign In</Link>
@@ -375,12 +475,12 @@ export default function App() {
             return [...prev, {...p, quantity: 1}];
           });
         }}/>} />
-        <Route path="/cart" element={<Cart cart={cart} setCart={setCart} user={user} />} />
+        <Route path="/cart" element={<Cart cart={cart} setCart={setCart} />} />
         <Route path="/checkout" element={<Checkout cart={cart} setCart={setCart} user={user} />} />
         <Route path="/login" element={<Auth setUser={setUser} isLogin={true} />} />
         <Route path="/register" element={<Auth setUser={setUser} isLogin={false} />} />
-        <Route path="/orders" element={user ? <Orders user={user} /> : <Navigate to="/login" />} />
-        {/* Admin route omitted for brevity, keeping storefront focus */}
+        <Route path="/orders" element={<Orders />} />
+        <Route path="/admin" element={user?.role === 'admin' ? <Admin /> : <Navigate to="/" />} />
       </Routes>
     </div>
   );

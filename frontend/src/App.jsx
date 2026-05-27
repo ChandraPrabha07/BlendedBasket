@@ -3,7 +3,7 @@ import { Routes, Route, Link, useNavigate, Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { ShoppingCart, User as UserIcon, LogOut, Package, ShieldCheck } from 'lucide-react';
 
-axios.defaults.baseURL = 'http://localhost:3000/api';
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 const Home = ({ addToCart }) => {
   const [products, setProducts] = useState([]);
